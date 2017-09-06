@@ -23,6 +23,15 @@ class CallBackLogic extends Observable implements Runnable {
 	Set<CallBackModel> callbackCache = new CopyOnWriteArraySet<CallBackModel>();
 	int[] sendtime;
 	String rusult;
+	long sleepTime=5; //设置多长时间运行一次，发送数据 单位为秒
+
+	public long getSleepTime() {
+		return sleepTime;
+	}
+
+	public void setSleepTime(long sleepTime) {
+		this.sleepTime = sleepTime;
+	}
 
 	public boolean addResultKV(String result) {
 		if ((!result.equals(null) || result.equals(""))) {
@@ -36,6 +45,7 @@ class CallBackLogic extends Observable implements Runnable {
 	public boolean addCallBackModel(CallBackModel callBackModel) {
 		if (callBackModel != null) {
 			System.out.println(callbackCache.size());
+			System.out.println("发送数据"+callBackModel.getCallbackdata()+"已添加到发送缓存");
 			return callbackCache.add(callBackModel);
 		}
 		return false;
@@ -67,8 +77,8 @@ class CallBackLogic extends Observable implements Runnable {
 
 			try {
 				sendData(datetime);
-				TimeUnit.SECONDS.sleep(5);
-				System.out.println("我是发送数据线程====当前缓存中的数据为："+this.callbackCache.size());
+				TimeUnit.SECONDS.sleep(sleepTime);
+				System.out.println("我是发送数据线程====当前缓存中的数据为：" + this.callbackCache.size());
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				logger.error("【计时线程】出错:" + e.getMessage());
@@ -88,8 +98,8 @@ class CallBackLogic extends Observable implements Runnable {
 						if (json != null) {
 							if (this.checkResult(json)) {
 								this.callbackCache.remove(callBackModel);
-								System.out.println(
-										"发送完数据==当前缓存中条数为==" + this.callbackCache.size()  );// 开始发送数据
+								System.out.println("发送完数据==当前缓存中条数为==" + this.callbackCache.size() + "发送数据次数为：="
+										+ callBackModel.getSendCount());// 开始发送数据
 								setChanged();// 改变事件状态
 								this.notifyObservers(callBackModel);// 通知观察者发送数据
 							} else {
@@ -145,6 +155,12 @@ class CallBackLogic extends Observable implements Runnable {
 		}
 	}
 
+	private boolean checkSendnumb(CallBackModel m) {
+		if (m.getSendCount() > sendtime.length - 1)
+			return false;
+		return true;
+	}
+
 	/***
 	 * 发送数据异常或错误时处理方法
 	 * 
@@ -153,11 +169,18 @@ class CallBackLogic extends Observable implements Runnable {
 	private void errorHandle(CallBackModel m) {
 		this.callbackCache.remove(m);
 		m.setSendCount(m.getSendCount() + 1);
-		Calendar calendar = new GregorianCalendar();
-		calendar.setTime(m.getSendDate());
-		calendar.add(calendar.SECOND, sendtime[m.getSendCount()]);
-		m.setSendDate(calendar.getTime());
-		this.callbackCache.add(m);
+		if (checkSendnumb(m)) {
+			Calendar calendar = Calendar.getInstance();
+			calendar.setTime(m.getSendDate());
+			calendar.add(calendar.SECOND, sendtime[m.getSendCount()]);
+			m.setSendDate(calendar.getTime());
+			System.out.println("下载发送时间为：" + m.getSendDate().getYear() + "年" + m.getSendDate().getMonth() + "月"
+					+ m.getSendDate().getDay() + "日 " + m.getSendDate().getHours() + ":" + m.getSendDate().getMinutes()
+					+ ":" + m.getSendDate().getSeconds() + "发送次数为：" + m.getSendCount()+"发送数据"+m.getCallbackdata());
+			this.callbackCache.add(m);
+		} else {
+			this.callbackCache.remove(m);
+		}
 	}
 
 	/***
@@ -172,7 +195,7 @@ class CallBackLogic extends Observable implements Runnable {
 	@SuppressWarnings("unused")
 	private Boolean isDateTime(Date d1, Date d2) {
 
-		if (d1.getTime() - d2.getTime() > 1) {
+		if (d2.compareTo(d1) <= 0) {
 			return true;
 		}
 		return false;
