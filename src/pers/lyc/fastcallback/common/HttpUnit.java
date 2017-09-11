@@ -28,9 +28,9 @@ public class HttpUnit {
 	 * httpPost
 	 * 
 	 * @param url
-	 *            路径
+	 *            请求路径
 	 * @param jsonParam
-	 *            参数
+	 *            请求参数
 	 * @return
 	 */
 	public static String httpPost(String url, JSONObject jsonParam) {
@@ -50,8 +50,7 @@ public class HttpUnit {
 	 */
 	public static String httpPost(String url, String jsonParam, boolean noNeedResponse) {
 		// post请求返回结果
-		HttpClient httpClient = HttpClients.createDefault(); // new
-																// DefaultHttpClient();
+		HttpClient httpClient = HttpClients.createDefault();
 		String jsonResult = null;
 		HttpPost method = new HttpPost(url);
 		try {
@@ -78,12 +77,12 @@ public class HttpUnit {
 					/** 把json字符串转换成json对象 **/
 					jsonResult = str;
 				} catch (Exception e) {
-					logger.error("post请求提交失败:" + url);
+					System.out.println("post请求提交失败:" + url);
 					throw new FastException("读取请求返回数据出错");
 				}
 			}
 		} catch (IOException e) {
-			logger.error("post请求提交失败:" + url);
+			System.out.println("post请求提交失败:" + url);
 			throw new FastException("请求地址没有响应");
 		}
 		return jsonResult;
@@ -100,7 +99,7 @@ public class HttpUnit {
 		// get请求返回结果
 		JSONObject jsonResult = null;
 		try {
-			HttpClient client = new DefaultHttpClient();
+			HttpClient client = HttpClients.createDefault();
 			// 发送get请求
 			HttpGet request = new HttpGet(url);
 			HttpResponse response = client.execute(request);

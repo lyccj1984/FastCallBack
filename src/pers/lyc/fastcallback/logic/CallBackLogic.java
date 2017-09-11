@@ -2,17 +2,17 @@ package pers.lyc.fastcallback.logic;
 
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.slf4j.LoggerFactory;
-import com.alibaba.fastjson.JSONObject;
 import ch.qos.logback.classic.Logger;
 import pers.lyc.fastcallback.common.HttpUnit;
+import pers.lyc.fastcallback.exception.FastException;
 import pers.lyc.fastcallback.model.CallBackModel;
 
 class CallBackLogic extends Observable implements Runnable {
@@ -20,10 +20,12 @@ class CallBackLogic extends Observable implements Runnable {
 	private static Logger logger = (Logger) LoggerFactory.getLogger(CallBackLogic.class); // 日志记录
 
 	@SuppressWarnings("rawtypes")
-	Set<CallBackModel> callbackCache = new CopyOnWriteArraySet<CallBackModel>();
+	LinkedBlockingQueue<CallBackModel> callbackCacheQueue = new LinkedBlockingQueue<CallBackModel>();
 	int[] sendtime;
 	String rusult;
-	long sleepTime=5; //设置多长时间运行一次，发送数据 单位为秒
+	long sleepTime = 5; // 设置多长时间运行一次，发送数据 单位为秒
+	// int queueSize = 0;
+	public AtomicInteger queueSize = new AtomicInteger(0);
 
 	public long getSleepTime() {
 		return sleepTime;
@@ -41,18 +43,50 @@ class CallBackLogic extends Observable implements Runnable {
 		return false;
 	}
 
+	/**
+	 * 添加一个回调实体
+	 * 
+	 * @param isonce
+	 *            是否马上发送一次
+	 * @param callBackModel
+	 * @return
+	 */
 	@SuppressWarnings("rawtypes")
-	public boolean addCallBackModel(CallBackModel callBackModel) {
+	private boolean addCallBackModel(CallBackModel callBackModel) {
 		if (callBackModel != null) {
-			System.out.println(callbackCache.size());
-			System.out.println("发送数据"+callBackModel.getCallbackdata()+"已添加到发送缓存");
-			return callbackCache.add(callBackModel);
+
+			boolean tempadd = callbackCacheQueue.offer(callBackModel);
+			if (tempadd) {
+				this.queueSize.incrementAndGet();
+				System.out.println("对像" + callBackModel.getCallbackdata() + "加入队列");
+				return true;
+			}
+			return false;
+
 		}
 		return false;
 	}
 
-	public boolean romveCallBackModel(@SuppressWarnings("rawtypes") CallBackModel cm) {
-		return callbackCache.remove(cm);
+	public boolean addSendCallbackData(CallBackModel m) {
+		m.setSendDate(addDateTime(m.getSendDate(), sendtime[0]));
+		m.setSendCount(1);
+		return addCallBackModel(m);
+	}
+
+	/**
+	 * 回调实体出队(删除)
+	 * 
+	 * @return
+	 */
+	public CallBackModel takecallBackModel() {
+		CallBackModel tempm;
+		tempm = callbackCacheQueue.poll();
+		if (tempm != null) {
+			this.queueSize.decrementAndGet();
+			System.out.println("====出队已完成当前数据量为：" + this.queueSize.get());
+			return tempm;
+		}
+		return null;
 	}
 
 	/***
@@ -62,8 +96,9 @@ class CallBackLogic extends Observable implements Runnable {
 	 */
 	public CallBackLogic(int... senddata) {
 		super();
+		if (senddata.length < 1)
+			throw new FastException("回调时间，不能为空");
 		sendtime = new int[senddata.length];
-
 		for (int i = 0; i < sendtime.length; i++) {
 			sendtime[i] = senddata[i];
 		}
@@ -72,49 +107,37 @@ class CallBackLogic extends Observable implements Runnable {
 
 	@Override
 	public void run() {
-		Date datetime = new Date();
-		while (true) {
 
+		while (true) {
 			try {
+
+				Date datetime = new Date();
 				sendData(datetime);
 				TimeUnit.SECONDS.sleep(sleepTime);
-				System.out.println("我是发送数据线程====当前缓存中的数据为：" + this.callbackCache.size());
+				System.out.println(this.hashCode() + "当前缓存中的数据===：" + this.queueSize.get() + "==="
+						+ this.callbackCacheQueue.size());
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				logger.error("【计时线程】出错:" + e.getMessage());
-				e.printStackTrace();
+
 			}
 		}
 	}
 
 	@SuppressWarnings("rawtypes")
-	private synchronized void sendData(Date datatime) {
-		for (CallBackModel callBackModel : callbackCache) {
-			if (getsendcount(callBackModel)) {// 判断发送次数是否已超过设定次数
-				// 根据时间判断是否可以发送数据
-				try {
-					if (isDateTime(callBackModel.getSendDate(), datatime)) {// 判断当前数据是否可以发
-						String json = httpSendData(callBackModel);
-						if (json != null) {
-							if (this.checkResult(json)) {
-								this.callbackCache.remove(callBackModel);
-								System.out.println("发送完数据==当前缓存中条数为==" + this.callbackCache.size() + "发送数据次数为：="
-										+ callBackModel.getSendCount());// 开始发送数据
-								setChanged();// 改变事件状态
-								this.notifyObservers(callBackModel);// 通知观察者发送数据
-							} else {
-								this.errorHandle(callBackModel);
-							}
-						}
-					}
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					logger.error("【发送数据】发送数据出错" + e.getMessage());
-					e.printStackTrace();
-				}
-
+	private void sendData(Date datatime) {
+		/* CallBackModel callBackModel = this.takecallBackModel(); */
+		CallBackModel m = this.callbackCacheQueue.peek();
+		if (m == null)
+			return;
+		if (isDateTime(m.getSendDate(), datatime) && this.checkSendnumb(m)) {
+			String json = httpSendData(m);
+			if (json != null) {
+				this.takecallBackModel();
+				setChanged();// 改变事件状态
+				notifyObservers(m);
 			}
 		}
+
 	}
 
 	private boolean checkResult(String json) {
@@ -136,6 +159,7 @@ class CallBackLogic extends Observable implements Runnable {
 	private String httpSendData(CallBackModel m) {
 		try {
 			if (m.getSendUrl() != null && m.getCallbackdata() != null) {
+				System.err.println("当前正要发送数据为==" + m.getCallbackdata() + "次数为:" + m.getSendCount());
 				String json = HttpUnit.httpPost(m.getSendUrl(), m.getCallbackdata().toString(), false);
 				if (json == null) {
 					errorHandle(m);
@@ -144,20 +168,22 @@ class CallBackLogic extends Observable implements Runnable {
 					return json;
 				}
 			} else {
-				romveCallBackModel(m);
-				System.out.println("发送数据url地址为空" + this.callbackCache.size());
+				System.out.println("发送数据url地址为空" + this.queueSize);
 				return null;
 			}
 		} catch (Exception e) {
 			errorHandle(m);
-			logger.error("通过http发送数据时错误" + e.getMessage());
+			System.out.println("发送数据错误" + m.getCallbackdata());
 			return null;
 		}
 	}
 
 	private boolean checkSendnumb(CallBackModel m) {
-		if (m.getSendCount() > sendtime.length - 1)
+		if (m.getSendCount() > sendtime.length) {
+			takecallBackModel();
+			//System.err.println("当前发送次数为" + m.getSendCount()+"已超过发送次数"+sendtime.length);
 			return false;
+		}
 		return true;
 	}
 
@@ -167,20 +193,24 @@ class CallBackLogic extends Observable implements Runnable {
 	 * @param m
 	 */
 	private void errorHandle(CallBackModel m) {
-		this.callbackCache.remove(m);
+		this.takecallBackModel();
 		m.setSendCount(m.getSendCount() + 1);
 		if (checkSendnumb(m)) {
-			Calendar calendar = Calendar.getInstance();
-			calendar.setTime(m.getSendDate());
-			calendar.add(calendar.SECOND, sendtime[m.getSendCount()]);
-			m.setSendDate(calendar.getTime());
-			System.out.println("下载发送时间为：" + m.getSendDate().getYear() + "年" + m.getSendDate().getMonth() + "月"
-					+ m.getSendDate().getDay() + "日 " + m.getSendDate().getHours() + ":" + m.getSendDate().getMinutes()
-					+ ":" + m.getSendDate().getSeconds() + "发送次数为：" + m.getSendCount()+"发送数据"+m.getCallbackdata());
-			this.callbackCache.add(m);
-		} else {
-			this.callbackCache.remove(m);
+			m.setSendDate(addDateTime(m.getSendDate(), sendtime[m.getSendCount() - 2]));
+			System.out.println("共计累加次数==：" + (m.getSendCount() - 1) + "被发送的数据==" + m.getCallbackdata());
+			this.addCallBackModel(m);
 		}
+	}
+
+	private Date addDateTime(Date dt, int second) {
+		Date dtc = null;
+		if (dt != null) {
+			Calendar calendar = Calendar.getInstance();
+			calendar.setTime(dt);
+			calendar.add(calendar.SECOND, second);
+			dtc = calendar.getTime();
+		}
+		return dtc;
 	}
 
 	/***
@@ -194,28 +224,10 @@ class CallBackLogic extends Observable implements Runnable {
 	 */
 	@SuppressWarnings("unused")
 	private Boolean isDateTime(Date d1, Date d2) {
-
-		if (d2.compareTo(d1) <= 0) {
+		if (d1.before(d2) || d1.equals(d2))
 			return true;
-		}
-		return false;
-	}
 
-	/***
-	 * 椐据发送次数判断是否要发送数据
-	 * 
-	 * @param callBackModel
-	 * @return
-	 */
-	@SuppressWarnings("unused")
-	private Boolean getsendcount(CallBackModel callBackModel) {
-		if (callBackModel == null)
-			return false;
-		if (callBackModel.getSendCount() > sendtime.length) {
-			this.callbackCache.remove(callBackModel);
-			return false;
-		}
-		return true;
+		return false;
 	}
 
 }
