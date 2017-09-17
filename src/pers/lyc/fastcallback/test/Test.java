@@ -10,19 +10,35 @@ public class Test {
 
 	public static void main(String[] args) throws InterruptedException {
 		// TODO Auto-generated method stub
-		LogicProx lp = new LogicProx(2, new TestObServer(), 1L, "0", 5, 10, 15, 20, 25, 30);
+		LogicProx lp = new LogicProx(3, 5, new TestObServer(), 1L, "0", 5, 10,15,20);
+		int availProcessors = Runtime.getRuntime().availableProcessors();
+        System.out.println("avail processors count: " + availProcessors);
+		// System.err.println(tests(true));
 		while (true) {
 			data++;
 			TimeUnit.MILLISECONDS.sleep(1000);
-			if(data>100)
+			if (data > 100)
 				return;
 			SObject so = new SObject();
 			so.setCallbackdata(String.valueOf(data));
 			so.setSendUrl("http://192.168.223.1:8090//webapi/UserBehaviour/report");
-			System.err.println(lp.addCallBackModel(so));
+			System.err.println("添加发送数据"+lp.addCallBackModel(so));
 			System.out.println("产生发送数据==" + data);
 
 		}
+
+	}
+
+	private static boolean tests(boolean a) {
+		boolean[] temp = new boolean[] { true, true, false, false };
+
+		for (boolean i : temp) {
+			if (!(a & i)) {
+				return false;
+			}
+
+		}
+		return true;
 
 	}
 

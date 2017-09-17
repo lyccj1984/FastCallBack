@@ -2,11 +2,13 @@ package pers.lyc.fastcallback.logic;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Observable;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.LoggerFactory;
@@ -15,17 +17,47 @@ import pers.lyc.fastcallback.common.HttpUnit;
 import pers.lyc.fastcallback.exception.FastException;
 import pers.lyc.fastcallback.model.CallBackModel;
 
-class CallBackLogic extends Observable implements Runnable {
+class CallBackLogic extends Observable {
 
 	private static Logger logger = (Logger) LoggerFactory.getLogger(CallBackLogic.class); // 日志记录
 
+	public volatile int maxQueueNumb = Integer.MAX_VALUE;// 有界队列最大数
+
+	static final float DEFAULT_LOAD_FACTOR = 0.75f;
 	@SuppressWarnings("rawtypes")
-	LinkedBlockingQueue<CallBackModel> callbackCacheQueue = new LinkedBlockingQueue<CallBackModel>();
+	LinkedBlockingQueue<CallBackModel> callbackCacheQueue;
 	int[] sendtime;
 	String rusult;
 	long sleepTime = 5; // 设置多长时间运行一次，发送数据 单位为秒
-	// int queueSize = 0;
-	public AtomicInteger queueSize = new AtomicInteger(0);
+	Thread run;// 线程类
+	private boolean interrup = true;// 中断线程标
+
+	private boolean threadrunfalg = true;// 线程while循环标识
+
+	public AtomicInteger queueSize = new AtomicInteger(0);// 当前队列中的对象数目
+
+	public boolean isInterrup() {
+		return interrup;
+	}
+
+	public synchronized void setInterrup(boolean interrup) {
+		if (run != null) {
+			this.interrup = interrup;
+			run.interrupt();
+		}
+	}
+
+	/**
+	 * 获取队列数与最大值是否相等
+	 * 
+	 * @return大于或等于返回true 否则为fasle
+	 */
+	public boolean isQueueFull() {
+		if (this.queueSize.get() >= this.maxQueueNumb * DEFAULT_LOAD_FACTOR)
+			return true;
+
+		return false;
+	}
 
 	public long getSleepTime() {
 		return sleepTime;
@@ -94,10 +126,12 @@ class CallBackLogic extends Observable implements Runnable {
 	 * 
 	 * @param senddata
 	 */
-	public CallBackLogic(int... senddata) {
+	public CallBackLogic(int maxQueue, int... senddata) {
 		super();
 		if (senddata.length < 1)
 			throw new FastException("回调时间，不能为空");
+		this.maxQueueNumb = maxQueue;
+		callbackCacheQueue = new LinkedBlockingQueue<CallBackModel>(maxQueueNumb);
 		sendtime = new int[senddata.length];
 		for (int i = 0; i < sendtime.length; i++) {
 			sendtime[i] = senddata[i];
@@ -105,20 +139,35 @@ class CallBackLogic extends Observable implements Runnable {
 
 	}
 
-	@Override
-	public void run() {
+	/**
+	 * 启动线程
+	 */
+	public void start() {
+		run = new Thread(new RunThread());
+		run.start();
+	}
 
-		while (true) {
-			try {
+	class RunThread extends Thread {
 
-				Date datetime = new Date();
-				sendData(datetime);
-				TimeUnit.SECONDS.sleep(sleepTime);
-				System.out.println(this.hashCode() + "当前缓存中的数据===：" + this.queueSize.get() + "==="
-						+ this.callbackCacheQueue.size());
-			} catch (InterruptedException e) {
-				logger.error("【计时线程】出错:" + e.getMessage());
+		@Override
+		public void run() {
 
+			while (threadrunfalg) {
+				try {
+					if (!this.isInterrupted()) {
+						Date datetime = new Date();
+						sendData(datetime);
+						TimeUnit.SECONDS.sleep(sleepTime);
+						System.out.println(
+								this.hashCode() + "当前缓存中的数据===：" + queueSize.get() + "===" + callbackCacheQueue.size());
+					} else {
+						throw new InterruptedException();
+					}
+				} catch (InterruptedException e) {
+					threadrunfalg = false;
+					logger.error("【计时线程】出错:" + e.getMessage());
+					Thread.currentThread().interrupt();
+				}
 			}
 		}
 	}
@@ -181,7 +230,8 @@ class CallBackLogic extends Observable implements Runnable {
 	private boolean checkSendnumb(CallBackModel m) {
 		if (m.getSendCount() > sendtime.length) {
 			takecallBackModel();
-			//System.err.println("当前发送次数为" + m.getSendCount()+"已超过发送次数"+sendtime.length);
+			// System.err.println("当前发送次数为" +
+			// m.getSendCount()+"已超过发送次数"+sendtime.length);
 			return false;
 		}
 		return true;
