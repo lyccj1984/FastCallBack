@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.Logger;
 import pers.lyc.fastcallback.common.HttpUnit;
@@ -19,22 +20,22 @@ import pers.lyc.fastcallback.model.CallBackModel;
 
 class CallBackLogic extends Observable {
 
-	private static Logger logger = (Logger) LoggerFactory.getLogger(CallBackLogic.class); // ÈÕÖ¾¼ÇÂ¼
+	private static Logger logger = (Logger) LoggerFactory.getLogger(CallBackLogic.class); // æ—¥å¿—è®°å½•
 
-	public volatile int maxQueueNumb = Integer.MAX_VALUE;// ÓĞ½ç¶ÓÁĞ×î´óÊı
+	public volatile int maxQueueNumb = Integer.MAX_VALUE;// æœ‰ç•Œé˜Ÿåˆ—æœ€å¤§æ•°
 
 	static final float DEFAULT_LOAD_FACTOR = 0.75f;
 	@SuppressWarnings("rawtypes")
 	LinkedBlockingQueue<CallBackModel> callbackCacheQueue;
 	int[] sendtime;
 	String rusult;
-	long sleepTime = 5; // ÉèÖÃ¶à³¤Ê±¼äÔËĞĞÒ»´Î£¬·¢ËÍÊı¾İ µ¥Î»ÎªÃë
-	Thread run;// Ïß³ÌÀà
-	private boolean interrup = true;// ÖĞ¶ÏÏß³Ì±ê
+	long sleepTime = 5; // è®¾ç½®å¤šé•¿æ—¶é—´è¿è¡Œä¸€æ¬¡ï¼Œå‘é€æ•°æ® å•ä½ä¸ºç§’
+	Thread run;// çº¿ç¨‹ç±»
+	private boolean interrup = true;// ä¸­æ–­çº¿ç¨‹æ ‡
 
-	private boolean threadrunfalg = true;// Ïß³ÌwhileÑ­»·±êÊ¶
+	private boolean threadrunfalg = true;// çº¿ç¨‹whileå¾ªç¯æ ‡è¯†
 
-	public AtomicInteger queueSize = new AtomicInteger(0);// µ±Ç°¶ÓÁĞÖĞµÄ¶ÔÏóÊıÄ¿
+	public AtomicInteger queueSize = new AtomicInteger(0);// å½“å‰é˜Ÿåˆ—ä¸­çš„å¯¹è±¡æ•°ç›®
 
 	public boolean isInterrup() {
 		return interrup;
@@ -48,9 +49,9 @@ class CallBackLogic extends Observable {
 	}
 
 	/**
-	 * »ñÈ¡¶ÓÁĞÊıÓë×î´óÖµÊÇ·ñÏàµÈ
+	 * è·å–é˜Ÿåˆ—æ•°ä¸æœ€å¤§å€¼æ˜¯å¦ç›¸ç­‰
 	 * 
-	 * @return´óÓÚ»òµÈÓÚ·µ»Øtrue ·ñÔòÎªfasle
+	 * @returnå¤§äºæˆ–ç­‰äºè¿”å›true å¦åˆ™ä¸ºfasle
 	 */
 	public boolean isQueueFull() {
 		if (this.queueSize.get() >= this.maxQueueNumb * DEFAULT_LOAD_FACTOR)
@@ -68,7 +69,7 @@ class CallBackLogic extends Observable {
 	}
 
 	public boolean addResultKV(String result) {
-		if ((!result.equals(null) || result.equals(""))) {
+		if ((StringUtils.isNotBlank(result))) {
 			this.rusult = result;
 			return true;
 		}
@@ -76,10 +77,10 @@ class CallBackLogic extends Observable {
 	}
 
 	/**
-	 * Ìí¼ÓÒ»¸ö»Øµ÷ÊµÌå
+	 * æ·»åŠ ä¸€ä¸ªå›è°ƒå®ä½“
 	 * 
 	 * @param isonce
-	 *            ÊÇ·ñÂíÉÏ·¢ËÍÒ»´Î
+	 *            æ˜¯å¦é©¬ä¸Šå‘é€ä¸€æ¬¡
 	 * @param callBackModel
 	 * @return
 	 */
@@ -90,7 +91,7 @@ class CallBackLogic extends Observable {
 			boolean tempadd = callbackCacheQueue.offer(callBackModel);
 			if (tempadd) {
 				this.queueSize.incrementAndGet();
-				System.out.println("¶ÔÏñ" + callBackModel.getCallbackdata() + "¼ÓÈë¶ÓÁĞ");
+				System.out.println("å¯¹åƒ" + callBackModel.getCallbackdata() + "åŠ å…¥é˜Ÿåˆ—");
 				return true;
 			}
 			return false;
@@ -106,7 +107,7 @@ class CallBackLogic extends Observable {
 	}
 
 	/**
-	 * »Øµ÷ÊµÌå³ö¶Ó(É¾³ı)
+	 * å›è°ƒå®ä½“å‡ºé˜Ÿ(åˆ é™¤)
 	 * 
 	 * @return
 	 */
@@ -115,21 +116,21 @@ class CallBackLogic extends Observable {
 		tempm = callbackCacheQueue.poll();
 		if (tempm != null) {
 			this.queueSize.decrementAndGet();
-			System.out.println("====³ö¶ÓÒÑÍê³Éµ±Ç°Êı¾İÁ¿Îª£º" + this.queueSize.get());
+			System.out.println("====å‡ºé˜Ÿå·²å®Œæˆå½“å‰æ•°æ®é‡ä¸ºï¼š" + this.queueSize.get());
 			return tempm;
 		}
 		return null;
 	}
 
 	/***
-	 * ¹¹Ôìº¯Êı£¬´«ÈëµÄÊÇ·¢ËÍÊ±¼ä¸ô£¬µ¥Î»ÎªÃë£¬ÒÔÄÜ±»5Õû³ı
+	 * æ„é€ å‡½æ•°ï¼Œä¼ å…¥çš„æ˜¯å‘é€æ—¶é—´éš”ï¼Œå•ä½ä¸ºç§’ï¼Œä»¥èƒ½è¢«5æ•´é™¤
 	 * 
 	 * @param senddata
 	 */
 	public CallBackLogic(int maxQueue, int... senddata) {
 		super();
 		if (senddata.length < 1)
-			throw new FastException("»Øµ÷Ê±¼ä£¬²»ÄÜÎª¿Õ");
+			throw new FastException("å›è°ƒæ—¶é—´ï¼Œä¸èƒ½ä¸ºç©º");
 		this.maxQueueNumb = maxQueue;
 		callbackCacheQueue = new LinkedBlockingQueue<CallBackModel>(maxQueueNumb);
 		sendtime = new int[senddata.length];
@@ -140,11 +141,13 @@ class CallBackLogic extends Observable {
 	}
 
 	/**
-	 * Æô¶¯Ïß³Ì
+	 * å¯åŠ¨çº¿ç¨‹
 	 */
-	public void start() {
-		run = new Thread(new RunThread());
-		run.start();
+	public  void   start() {
+		synchronized(this) {
+			run = new Thread(new RunThread());
+			run.start();
+		}
 	}
 
 	class RunThread extends Thread {
@@ -159,13 +162,13 @@ class CallBackLogic extends Observable {
 						sendData(datetime);
 						TimeUnit.SECONDS.sleep(sleepTime);
 						System.out.println(
-								this.hashCode() + "µ±Ç°»º´æÖĞµÄÊı¾İ===£º" + queueSize.get() + "===" + callbackCacheQueue.size());
+								this.hashCode() + "å½“å‰ç¼“å­˜ä¸­çš„æ•°æ®===ï¼š" + queueSize.get() + "===" + callbackCacheQueue.size());
 					} else {
 						throw new InterruptedException();
 					}
 				} catch (InterruptedException e) {
 					threadrunfalg = false;
-					logger.error("¡¾¼ÆÊ±Ïß³Ì¡¿³ö´í:" + e.getMessage());
+					logger.error("ã€è®¡æ—¶çº¿ç¨‹ã€‘å‡ºé”™:" + e.getMessage());
 					Thread.currentThread().interrupt();
 				}
 			}
@@ -182,7 +185,7 @@ class CallBackLogic extends Observable {
 			String json = httpSendData(m);
 			if (json != null) {
 				this.takecallBackModel();
-				setChanged();// ¸Ä±äÊÂ¼ş×´Ì¬
+				setChanged();// æ”¹å˜äº‹ä»¶çŠ¶æ€
 				notifyObservers(m);
 			}
 		}
@@ -200,7 +203,7 @@ class CallBackLogic extends Observable {
 	}
 
 	/***
-	 * ·¢ËÍ»Øµ÷´¦Àí
+	 * å‘é€å›è°ƒå¤„ç†
 	 * 
 	 * @param m
 	 * @return
@@ -208,7 +211,7 @@ class CallBackLogic extends Observable {
 	private String httpSendData(CallBackModel m) {
 		try {
 			if (m.getSendUrl() != null && m.getCallbackdata() != null) {
-				System.err.println("µ±Ç°ÕıÒª·¢ËÍÊı¾İÎª==" + m.getCallbackdata() + "´ÎÊıÎª:" + m.getSendCount());
+				System.err.println("å½“å‰æ­£è¦å‘é€æ•°æ®ä¸º==" + m.getCallbackdata() + "æ¬¡æ•°ä¸º:" + m.getSendCount());
 				String json = HttpUnit.httpPost(m.getSendUrl(), m.getCallbackdata().toString(), false);
 				if (json == null) {
 					errorHandle(m);
@@ -217,12 +220,12 @@ class CallBackLogic extends Observable {
 					return json;
 				}
 			} else {
-				System.out.println("·¢ËÍÊı¾İurlµØÖ·Îª¿Õ" + this.queueSize);
+				System.out.println("å‘é€æ•°æ®urlåœ°å€ä¸ºç©º" + this.queueSize);
 				return null;
 			}
 		} catch (Exception e) {
 			errorHandle(m);
-			System.out.println("·¢ËÍÊı¾İ´íÎó" + m.getCallbackdata());
+			System.out.println("å‘é€æ•°æ®é”™è¯¯" + m.getCallbackdata());
 			return null;
 		}
 	}
@@ -230,15 +233,15 @@ class CallBackLogic extends Observable {
 	private boolean checkSendnumb(CallBackModel m) {
 		if (m.getSendCount() > sendtime.length) {
 			takecallBackModel();
-			// System.err.println("µ±Ç°·¢ËÍ´ÎÊıÎª" +
-			// m.getSendCount()+"ÒÑ³¬¹ı·¢ËÍ´ÎÊı"+sendtime.length);
+			// System.err.println("å½“å‰å‘é€æ¬¡æ•°ä¸º" +
+			// m.getSendCount()+"å·²è¶…è¿‡å‘é€æ¬¡æ•°"+sendtime.length);
 			return false;
 		}
 		return true;
 	}
 
 	/***
-	 * ·¢ËÍÊı¾İÒì³£»ò´íÎóÊ±´¦Àí·½·¨
+	 * å‘é€æ•°æ®å¼‚å¸¸æˆ–é”™è¯¯æ—¶å¤„ç†æ–¹æ³•
 	 * 
 	 * @param m
 	 */
@@ -247,7 +250,7 @@ class CallBackLogic extends Observable {
 		m.setSendCount(m.getSendCount() + 1);
 		if (checkSendnumb(m)) {
 			m.setSendDate(addDateTime(m.getSendDate(), sendtime[m.getSendCount() - 2]));
-			System.out.println("¹²¼ÆÀÛ¼Ó´ÎÊı==£º" + (m.getSendCount() - 1) + "±»·¢ËÍµÄÊı¾İ==" + m.getCallbackdata());
+			System.out.println("å…±è®¡ç´¯åŠ æ¬¡æ•°==ï¼š" + (m.getSendCount() - 1) + "è¢«å‘é€çš„æ•°æ®==" + m.getCallbackdata());
 			this.addCallBackModel(m);
 		}
 	}
@@ -264,12 +267,12 @@ class CallBackLogic extends Observable {
 	}
 
 	/***
-	 * ¸ù¾İ·¢ËÍÊ±¼äÅĞ¶ÏÊÇ·ñÊÇÒª·¢ËÍµÄÊı¾İ
+	 * æ ¹æ®å‘é€æ—¶é—´åˆ¤æ–­æ˜¯å¦æ˜¯è¦å‘é€çš„æ•°æ®
 	 * 
 	 * @param d1
-	 *            Òª·¢ËÍÊı¾İµÄÊ±¼ä
+	 *            è¦å‘é€æ•°æ®çš„æ—¶é—´
 	 * @param d2
-	 *            µ±Ç°ÏµÍ³Ê±¼ä
+	 *            å½“å‰ç³»ç»Ÿæ—¶é—´
 	 * @return
 	 */
 	@SuppressWarnings("unused")

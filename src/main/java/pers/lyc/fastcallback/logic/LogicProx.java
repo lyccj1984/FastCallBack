@@ -28,14 +28,14 @@ public class LogicProx {
 	private int maxQueue = Integer.MAX_VALUE;
 	ExecutorService addcallback;
     
-	private int cpunumb=Runtime.getRuntime().availableProcessors();
+	//private int cpunumb=Runtime.getRuntime().availableProcessors();
 	
 	public LogicProx(int threadNumb, int maxQueue, Observer o, long sleepTime, String result, int... senddata) {
 
 		this.threadnumb = threadNumb;
 		this.sleepTime = sleepTime;
 		this.o = o;
-		this.snddatatime = senddata;
+		this.snddatatime = senddata.clone();
 		this.result = result;
 		this.maxQueue = maxQueue;
 		addcallback = Executors.newCachedThreadPool();//Executors.newFixedThreadPool(threadnumb);
@@ -105,7 +105,7 @@ public class LogicProx {
 	 */
 	private boolean isThreadQueue(boolean bool) {
 		for (CallBackLogic i : threadlist) {
-			if (!(bool & i.isQueueFull()))
+			if (!(bool && i.isQueueFull()))
 				return false;
 		}
 		return true;

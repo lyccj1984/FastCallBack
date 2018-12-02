@@ -7,7 +7,7 @@ import java.util.GregorianCalendar;
 public abstract class CallBackModel<T extends Object> {
 
 	/**
-	 * 要发送的数据
+	 * 瑕佸彂閫佺殑鏁版嵁
 	 * 
 	 * @return
 	 */
@@ -28,11 +28,11 @@ public abstract class CallBackModel<T extends Object> {
 	}
 
 	public Date getSendDate() {
-		return sendDate;
+		return (Date) sendDate.clone();
 	}
 
 	public void setSendDate(Date sendDate) {
-		this.sendDate = sendDate;
+		this.sendDate =(Date) sendDate.clone();
 	}
 
 	public Integer getSendCount() {

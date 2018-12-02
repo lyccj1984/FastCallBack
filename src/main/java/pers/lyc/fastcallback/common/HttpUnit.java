@@ -109,7 +109,7 @@ public class HttpUnit {
 				String strResult = EntityUtils.toString(response.getEntity());
 				/** 把json字符串转换成json对象 **/
 				jsonResult = JSONObject.parseObject(strResult);
-				url = URLDecoder.decode(url, "UTF-8");
+				//url = new String(URLDecoder.decode(url, "UTF-8")) ;
 			} else {
 				logger.error("get请求提交失败:" + url);
 			}

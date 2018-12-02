@@ -1,4 +1,4 @@
 package pers.lyc.fastcallback.test;
 
-public class mytest {
+public class MyTest {
 }
