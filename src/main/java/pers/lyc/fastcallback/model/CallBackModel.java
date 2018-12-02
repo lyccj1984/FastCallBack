@@ -1,8 +1,6 @@
 package pers.lyc.fastcallback.model;
 
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 
 public abstract class CallBackModel<T extends Object> {
 
