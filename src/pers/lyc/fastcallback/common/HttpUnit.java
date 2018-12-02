@@ -22,15 +22,15 @@ import pers.lyc.fastcallback.exception.FastException;
 
 public class HttpUnit {
 
-	private static Logger logger = (Logger) LoggerFactory.getLogger(HttpUnit.class); // ÈÕÖ¾¼ÇÂ¼
+	private static Logger logger = (Logger) LoggerFactory.getLogger(HttpUnit.class); // æ—¥å¿—è®°å½•
 
 	/**
 	 * httpPost
 	 * 
 	 * @param url
-	 *            ÇëÇóÂ·¾¶
+	 *            è¯·æ±‚è·¯å¾„
 	 * @param jsonParam
-	 *            ÇëÇó²ÎÊı
+	 *            è¯·æ±‚å‚æ•°
 	 * @return
 	 */
 	public static String httpPost(String url, JSONObject jsonParam) {
@@ -38,18 +38,18 @@ public class HttpUnit {
 	}
 
 	/**
-	 * postÇëÇó
+	 * postè¯·æ±‚
 	 * 
 	 * @param url
-	 *            urlµØÖ·
+	 *            urlåœ°å€
 	 * @param jsonParam
-	 *            ²ÎÊı
+	 *            å‚æ•°
 	 * @param noNeedResponse
-	 *            ²»ĞèÒª·µ»Ø½á¹û
+	 *            ä¸éœ€è¦è¿”å›ç»“æœ
 	 * @return
 	 */
 	public static String httpPost(String url, String jsonParam, boolean noNeedResponse) {
-		// postÇëÇó·µ»Ø½á¹û
+		// postè¯·æ±‚è¿”å›ç»“æœ
 		HttpClient httpClient = HttpClients.createDefault();
 		String jsonResult = null;
 		HttpPost method = new HttpPost(url);
@@ -57,7 +57,7 @@ public class HttpUnit {
 			if (null != jsonParam) {
 				RequestConfig config = RequestConfig.custom().setConnectTimeout(2000).setSocketTimeout(2000).build();
 				method.setConfig(config);
-				// ½â¾öÖĞÎÄÂÒÂëÎÊÌâ
+				// è§£å†³ä¸­æ–‡ä¹±ç é—®é¢˜
 				StringEntity entity = new StringEntity(jsonParam, "utf-8");
 				entity.setContentEncoding("UTF-8");
 				entity.setContentType("application/json");
@@ -65,57 +65,57 @@ public class HttpUnit {
 			}
 			HttpResponse result = httpClient.execute(method);
 			url = URLDecoder.decode(url, "UTF-8");
-			/** ÇëÇó·¢ËÍ³É¹¦£¬²¢µÃµ½ÏìÓ¦ **/
+			/** è¯·æ±‚å‘é€æˆåŠŸï¼Œå¹¶å¾—åˆ°å“åº” **/
 			if (result.getStatusLine().getStatusCode() == 200) {
 				String str = "";
 				try {
-					/** ¶ÁÈ¡·şÎñÆ÷·µ»Ø¹ıÀ´µÄjson×Ö·û´®Êı¾İ **/
+					/** è¯»å–æœåŠ¡å™¨è¿”å›è¿‡æ¥çš„jsonå­—ç¬¦ä¸²æ•°æ® **/
 					str = EntityUtils.toString(result.getEntity());
 					if (noNeedResponse) {
 						return null;
 					}
-					/** °Ñjson×Ö·û´®×ª»»³Éjson¶ÔÏó **/
+					/** æŠŠjsonå­—ç¬¦ä¸²è½¬æ¢æˆjsonå¯¹è±¡ **/
 					jsonResult = str;
 				} catch (Exception e) {
-					System.out.println("postÇëÇóÌá½»Ê§°Ü:" + url);
-					throw new FastException("¶ÁÈ¡ÇëÇó·µ»ØÊı¾İ³ö´í");
+					System.out.println("postè¯·æ±‚æäº¤å¤±è´¥:" + url);
+					throw new FastException("è¯»å–è¯·æ±‚è¿”å›æ•°æ®å‡ºé”™");
 				}
 			}
 		} catch (IOException e) {
-			System.out.println("postÇëÇóÌá½»Ê§°Ü:" + url);
-			throw new FastException("ÇëÇóµØÖ·Ã»ÓĞÏìÓ¦");
+			System.out.println("postè¯·æ±‚æäº¤å¤±è´¥:" + url);
+			throw new FastException("è¯·æ±‚åœ°å€æ²¡æœ‰å“åº”");
 		}
 		return jsonResult;
 	}
 
 	/**
-	 * ·¢ËÍgetÇëÇó
+	 * å‘é€getè¯·æ±‚
 	 * 
 	 * @param url
-	 *            Â·¾¶
+	 *            è·¯å¾„
 	 * @return
 	 */
 	public static JSONObject httpGet(String url) {
-		// getÇëÇó·µ»Ø½á¹û
+		// getè¯·æ±‚è¿”å›ç»“æœ
 		JSONObject jsonResult = null;
 		try {
 			HttpClient client = HttpClients.createDefault();
-			// ·¢ËÍgetÇëÇó
+			// å‘é€getè¯·æ±‚
 			HttpGet request = new HttpGet(url);
 			HttpResponse response = client.execute(request);
 
-			/** ÇëÇó·¢ËÍ³É¹¦£¬²¢µÃµ½ÏìÓ¦ **/
+			/** è¯·æ±‚å‘é€æˆåŠŸï¼Œå¹¶å¾—åˆ°å“åº” **/
 			if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-				/** ¶ÁÈ¡·şÎñÆ÷·µ»Ø¹ıÀ´µÄjson×Ö·û´®Êı¾İ **/
+				/** è¯»å–æœåŠ¡å™¨è¿”å›è¿‡æ¥çš„jsonå­—ç¬¦ä¸²æ•°æ® **/
 				String strResult = EntityUtils.toString(response.getEntity());
-				/** °Ñjson×Ö·û´®×ª»»³Éjson¶ÔÏó **/
+				/** æŠŠjsonå­—ç¬¦ä¸²è½¬æ¢æˆjsonå¯¹è±¡ **/
 				jsonResult = JSONObject.parseObject(strResult);
 				url = URLDecoder.decode(url, "UTF-8");
 			} else {
-				logger.error("getÇëÇóÌá½»Ê§°Ü:" + url);
+				logger.error("getè¯·æ±‚æäº¤å¤±è´¥:" + url);
 			}
 		} catch (IOException e) {
-			logger.error("getÇëÇóÌá½»Ê§°Ü:" + url, e);
+			logger.error("getè¯·æ±‚æäº¤å¤±è´¥:" + url, e);
 		}
 		return jsonResult;
 	}
