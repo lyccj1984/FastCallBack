@@ -1,4 +1,6 @@
 package pers.lyc.fastcallback.test;
 
-public class MyTest {
+ class MyTest {
+    public static void main(String[] args) {
+    }
 }

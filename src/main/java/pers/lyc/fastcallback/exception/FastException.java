@@ -1,7 +1,7 @@
 package pers.lyc.fastcallback.exception;
 
 /**
- * 梁艳春
+ * @author 梁艳春
  */
 public class FastException extends RuntimeException {
 
